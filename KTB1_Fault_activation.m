@@ -20,6 +20,61 @@ load_system(model);
 set_param(model, 'AlgebraicLoopSolver', 'LineSearch');  % or 'Auto'
 set_param(model, 'RelTol', '1e-4');                     % slightly tighter tolerance
 
+% Zero-crossing warnings appear on several Sign/Abs blocks when the adaptive
+% detector refuses to shrink the step size. Relax the diagnostic, keep the
+% adaptive algorithm (per the Simulink recommendation), and disable
+% zero-crossing detection on the known chatter-prone blocks.
+set_param(model, 'IgnoredZcDiagnostic', 'none');         % turn warning off
+set_param(model, 'ZeroCrossAlgorithm', 'Adaptive');      % recommended algorithm
+
+zc_blocks = {
+    'Abs';
+    'PID Controller1/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller2/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller3/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller4/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller7/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator'
+};
+
+for i = 1:numel(zc_blocks)
+    blk = [model '/' zc_blocks{i}];
+    try
+        set_param(blk, 'ZeroCross', 'off');
+    catch ME
+        % Some library blocks promote ZeroCross as a mask parameter, making it
+        % read-only from the child. Skip those blocks to avoid fatal errors but
+        % still proceed with the remaining configuration.
+        warning("Skipping zero-crossing disable on %s (%s)", blk, ME.message);
+    end
+end
+
+% Zero-crossing warnings appear on several Sign/Abs blocks when the adaptive
+% detector refuses to shrink the step size. Relax the diagnostic, keep the
+% adaptive algorithm (per the Simulink recommendation), and disable
+% zero-crossing detection on the known chatter-prone blocks.
+set_param(model, 'IgnoredZcDiagnostic', 'none');         % turn warning off
+set_param(model, 'ZeroCrossAlgorithm', 'Adaptive');      % recommended algorithm
+
+zc_blocks = {
+    'Abs';
+    'PID Controller1/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller2/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller3/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller4/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator';
+    'PID Controller7/Anti-windup/Cont. Clamping Parallel/SignPreIntegrator'
+};
+
+for i = 1:numel(zc_blocks)
+    set_param([model '/' zc_blocks{i}], 'ZeroCross', 'off');
+end
+
+% Zero-crossing warnings appear on several Sign/Abs blocks when the adaptive
+% detector refuses to shrink the step size. Relax the diagnostic and use the
+% non-adaptive algorithm to avoid repeated warnings without changing the
+% model structure.
+set_param(model, 'IgnoredZcDiagnostic', 'none');         % turn warning off
+set_param(model, 'ZeroCrossAlgorithm', 'Nonadaptive');   % simpler ZC handling
+
 % Ensure model does NOT try to load state from config
 set_param(model, 'LoadInitialState', 'off');
 set_param(model, 'InitialState', '');
@@ -67,4 +122,5 @@ simOut2 = sim(model, ...
     'InitialState','xFinal_phase1');   % NOTICE THE QUOTES
 
 disp("=== Simulation complete ===");
+
 
